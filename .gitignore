@@ -1,1 +1,4 @@
-code/venv/
+venv/
+code/documents.json/
+code/search_index.usearch/
+code/__pycache__/
