@@ -6,8 +6,8 @@
 #   vector storage + retrival -> some library
 #   do an example on any source (report)
 
-# 1. import a pretrained model
-# 2. make it accept input = multiple documents
+# 1. import a pretrained model DONE
+# 2. make it accept input = multiple documents -> done but need to change to api later
 # 3. make it generate embdeddings for the documents
 # 4. store embeddings in a vector db
 # 5. make it search with a text query
@@ -19,22 +19,52 @@
 
 from sentence_transformers import SentenceTransformer
 import numpy as np
+from usearch.index import Index
 
-# 1. Load the pretrained model from Hugging Face
+# Load the pretrained model from Hugging Face
 print("Loading model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 print("Model loaded.")
 
-# 2. Define a single sentence to be encoded
-sentence = "This is a test sentence."
+# Documents
+documents = [
+    "The Canadian government has announced new immigration policies.",
+    "Lionel Messi scored a hat-trick in the last match.",
+    "Python is an interpreted, high-level, general-purpose programming language.",
+    "The new iPhone features a faster processor and a better camera.",
+    "Machine learning is a field of study in artificial intelligence."
+]
+print(f"Loaded {len(documents)} documents.")
 
-# 3. Use the model's encode() method to get the embedding
-embedding = model.encode(sentence)
+# Encode the Documents
+document_embeddings = model.encode(documents).astype(np.float32)
+vector_size = document_embeddings.shape[1]
+print(f"Document embeddings created with shape: {document_embeddings.shape}")
 
-# 4. Print the results to see what it looks like
-print("\nOriginal sentence:", sentence)
-print("\nEmbedding (vector) shape:", embedding.shape)
-print("\nFirst 5 values of the embedding:", embedding[:5])
+# Initialize the index. We specify the number of dimensions (ndim) and the metric.
+# 'cos' is for cosine similarity, which is great for sentence embeddings.
+index = Index(ndim=vector_size, metric='cos')
 
-# The output is a NumPy array. You can see its type.
-print("\nType of embedding:", type(embedding))
+# Create an array of integer keys for our documents
+keys = np.arange(len(documents))
+
+# Add the document vectors to the index with their corresponding keys
+index.add(keys, document_embeddings)
+print(f"Index built. Total vectors in index: {len(index)}")
+
+# Perform a Search ---
+query = "what is a good language for AI?"
+print(f"\nSearching for: '{query}'")
+
+# Encode the query and ensure it's the correct data type
+query_embedding = model.encode(query).astype(np.float32)
+
+# Search the index for the top 2 closest vectors
+# The 'search' method returns a results object
+results = index.search(query_embedding, count=2)
+
+# --- 6. Show the Results ---
+print(f"\nTop 2 results:")
+# The 'keys' attribute of the results contains the integer keys we added
+for key in results.keys:
+    print(f"  - Document {key}: {documents[key]}")
