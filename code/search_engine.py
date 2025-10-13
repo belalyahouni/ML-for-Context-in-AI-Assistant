@@ -22,6 +22,7 @@ import numpy as np
 from usearch.index import Index
 import json
 from typing import List
+import os
 
 class Search:
     def __init__(self):
@@ -66,19 +67,25 @@ class Search:
         with open(self.DOCUMENTS_PATH, 'w') as f:
             json.dump(document_map, f)
         print(f"Document map saved to {self.DOCUMENTS_PATH}")
-"""
-# Perform a Search ---
-query = "what is a good language for AI?"
-print(f"\nSearching for: '{query}'")
+    def search(self, query: str, top_k: int = 1) -> List[str]:
+        """
+        Searches the embeddings, finds cos similarity matches, looks at the path in json, returns it.
+        """
+        # Check if the index file exists
+        if not os.path.exists(self.INDEX_PATH):
+            return [] # Or raise an error, or return a specific message
 
-# Encode the query and ensure it's the correct data type
-query_embedding = model.encode(query).astype(np.float32)
+        # Load the index and the document map
+        index = Index.restore(self.INDEX_PATH)
+        with open(self.DOCUMENTS_PATH, 'r') as f:
+            document_map = json.load(f)
 
-# Search the index for the top 2 closest vectors
-results = index.search(query_embedding, count=2)
+        # Encode query
+        print(f"Searching for: '{query}'")
+        query_embedding = self.model.encode(query).astype(np.float32)
 
-# Show the Results ---
-print(f"\nTop 2 results:")
-for key in results.keys:
-    print(f"  - Document {key}: {documents[key]}")
-"""
+        # Perform search
+        results = index.search(query_embedding, count=top_k)
+
+        found_documents = [document_map[str(key)] for key in results.keys]
+        return found_documents
