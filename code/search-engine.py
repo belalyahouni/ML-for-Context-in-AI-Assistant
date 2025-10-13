@@ -16,42 +16,57 @@
 # 8. use new vectors found to go back to original
 # 4. build api around it
 
-
+#imports
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from usearch.index import Index
+import json
+from typing import List
 
-# Load the pretrained model from Hugging Face
-print("Loading model...")
-model = SentenceTransformer('all-MiniLM-L6-v2')
-print("Model loaded.")
+class Search:
+    def __init__(self):
+        """
+        Defines the constants and loads the model.
+        """
+        # constants
+        self.INDEX_PATH = "search_index.usearch"
+        self.DOCUMENTS_PATH = "documents.json"
+        self.VECTOR_SIZE = 384
 
-# Documents
-documents = [
-    "The Canadian government has announced new immigration policies.",
-    "Lionel Messi scored a hat-trick in the last match.",
-    "Python is an interpreted, high-level, general-purpose programming language.",
-    "The new iPhone features a faster processor and a better camera.",
-    "Machine learning is a field of study in artificial intelligence."
-]
-print(f"Loaded {len(documents)} documents.")
+        # Load the pretrained model from Hugging Face
+        print("Loading model...")
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("Model loaded.")
 
-# Encode the Documents
-document_embeddings = model.encode(documents).astype(np.float32)
-vector_size = document_embeddings.shape[1]
-print(f"Document embeddings created with shape: {document_embeddings.shape}")
+    def index(self, documents: List[str]):
+        """
+        Takes in documents and encodes them, storing the embeddings and index.
+        """
+        # Encode the Documents
+        print(f"Generating embeddings for {len(documents)} documents...")
+        document_embeddings = model.encode(documents).astype(np.float32)
+        print("Embeddings generated.")
 
-# Initialize the index. We specify the number of dimensions (ndim) and the metric.
-# 'cos' is for cosine similarity, which is great for sentence embeddings.
-index = Index(ndim=vector_size, metric='cos')
+        # Initialize the index. We specify the number of dimensions (ndim) and the metric.
+        index = Index(ndim=VECTOR_SIZE, metric='cos')
 
-# Create an array of integer keys for our documents
-keys = np.arange(len(documents))
+        # Create an array of integer keys for our documents
+        keys = np.arange(len(documents))
 
-# Add the document vectors to the index with their corresponding keys
-index.add(keys, document_embeddings)
-print(f"Index built. Total vectors in index: {len(index)}")
+        # Add the document vectors to the index with their corresponding keys
+        index.add(keys, document_embeddings)
+        print(f"Index built. Total vectors in index: {len(index)}")
 
+        # Save the index to disk
+        index.save(self.INDEX_PATH)
+        print(f"Index saved to {self.INDEX_PATH}")
+
+        # Create and save the document map (key -> text)
+        document_map = {str(key): doc for key, doc in zip(keys, documents)}
+        with open(self.DOCUMENTS_PATH, 'w') as f:
+            json.dump(document_map, f)
+        print(f"Document map saved to {self.DOCUMENTS_PATH}")
+"""
 # Perform a Search ---
 query = "what is a good language for AI?"
 print(f"\nSearching for: '{query}'")
@@ -60,11 +75,10 @@ print(f"\nSearching for: '{query}'")
 query_embedding = model.encode(query).astype(np.float32)
 
 # Search the index for the top 2 closest vectors
-# The 'search' method returns a results object
 results = index.search(query_embedding, count=2)
 
-# --- 6. Show the Results ---
+# Show the Results ---
 print(f"\nTop 2 results:")
-# The 'keys' attribute of the results contains the integer keys we added
 for key in results.keys:
     print(f"  - Document {key}: {documents[key]}")
+"""

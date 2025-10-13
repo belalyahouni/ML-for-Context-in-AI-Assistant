@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
 
+from search-engine import Search
+
 class Document(BaseModel):
     text:str
 
@@ -22,5 +24,8 @@ def read_root():
 
 @app.post("/index")
 def index_documents(data: DocumentList):
+    documents_text = [doc.text for doc in data.documents]
+
     num_docs = len(data.documents)
+
     return {"message": f"Successfully received {num_docs} documents for indexing."}
