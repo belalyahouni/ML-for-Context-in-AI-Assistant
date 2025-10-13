@@ -35,7 +35,7 @@ class Search:
 
         # Load the pretrained model from Hugging Face
         print("Loading model...")
-        model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
         print("Model loaded.")
 
     def index(self, documents: List[str]):
@@ -44,11 +44,11 @@ class Search:
         """
         # Encode the Documents
         print(f"Generating embeddings for {len(documents)} documents...")
-        document_embeddings = model.encode(documents).astype(np.float32)
+        document_embeddings = self.model.encode(documents).astype(np.float32)
         print("Embeddings generated.")
 
         # Initialize the index. We specify the number of dimensions (ndim) and the metric.
-        index = Index(ndim=VECTOR_SIZE, metric='cos')
+        index = Index(ndim=self.VECTOR_SIZE, metric='cos')
 
         # Create an array of integer keys for our documents
         keys = np.arange(len(documents))
