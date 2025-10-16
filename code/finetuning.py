@@ -1,6 +1,9 @@
 from datasets import load_dataset
 from sentence_transformers import SentenceTransformer, losses, InputExample
 import random
+from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # Load Corupus in
 corpus_dataset = load_dataset("CoIR-Retrieval/cosqa", "corpus", split="corpus")
@@ -12,8 +15,8 @@ print(f"Queries loaded with {len(queries_dataset)} queries.")
 
 
 # Load in test set.
-eval_dataset = load_dataset("CoIR-Retrieval/cosqa", name="default", split="test")
-print(f"Evaluation 'test' split loaded with {len(eval_dataset)} query-document pairs.")
+train_dataset = load_dataset("CoIR-Retrieval/cosqa", name="default", split="test")
+print(f"Train 'test' split loaded with {len(train_dataset)} query-document pairs.")
 
 print("Loading model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -27,7 +30,7 @@ print(f"Example query entry:\nID: {list(query_map.keys())[0]}\nText: {list(query
 
 print("Building positive (query, code) pairs...")
 train_pairs = []
-for item in eval_dataset:
+for item in train_dataset:
     qid = item["query-id"]
     did = item["corpus-id"]
     
@@ -65,3 +68,34 @@ train_samples = [
 print(f"Converted {len(train_samples)} triplets into InputExamples.")
 print("Example InputExample:")
 print(train_samples[0])
+
+# Training loop
+train_dataloader = DataLoader(train_samples, shuffle=True, batch_size=8)
+print(f"DataLoader ready with {len(train_samples)} samples and batch size = 8.")
+
+train_loss = losses.TripletLoss(model=model)
+print("TripletLoss defined.")
+
+loss_values = []
+
+def loss_callback(score, epoch, step):
+    loss_values.append(score)
+
+model.fit(
+    train_objectives=[(train_dataloader, train_loss)],
+    epochs=1,
+    warmup_steps=100,
+    output_path="fine_tuned_model",
+    callback = loss_callback()
+)
+
+import matplotlib.pyplot as plt
+
+plt.plot(loss_values)
+plt.title("Training Loss per Step")
+plt.xlabel("Step")
+plt.ylabel("Loss")
+plt.grid(True)
+plt.show()
+
+print("Fine-tuning complete! Model saved to 'fine_tuned_model'.")
